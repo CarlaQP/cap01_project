@@ -534,3 +534,209 @@ height_in_inches <- 8.24
 # Save the plot with high quality
 ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/mapa_zonas.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
+
+#4.Conflictos por zonas ---Gráfico likert actividades####
+##4.1. cargar datos y organizarlos----
+head(all_sheets[["E_ambiental"]])
+head(all_sheets[["A_perfil"]])
+
+# Read the specific sheets into dataframes
+e_ambiental <- read_excel(file_path, sheet = "E_ambiental")
+a_perfil <- read_excel(file_path, sheet = "A_perfil")
+
+# Select the relevant columns from A_perfil
+a_perfil_selected <- a_perfil %>% select(ID, cofradia)
+
+# Merge the dataframes on the ID column
+merged_data_actividades <- e_ambiental %>%
+  left_join(a_perfil_selected, by = "ID")
+
+View(merged_data_actividades)
+
+unique(merged_data_actividades$cofradia)
+
+##4.2. Preparar los datos para el gráfico likert----
+# Crear una nueva columna "zona" basada en los valores de 'cofradia'
+merged_data_actividades <- merged_data_actividades %>%
+  mutate(zona = case_when(
+    cofradia %in% c("Andratx","Soller", "Pollença") ~ "Mallorca North",
+    cofradia %in% c("Palma", "Colonia de Sant Jordi", "Santanyi", "Portocolom" ) ~ "Mallorca South-West",
+    cofradia %in% c("Alcudia","Cala Ratjada", "Porto Cristo") ~ "Mallorca South-East",
+    cofradia %in% c("San Antoni de Portmany", "Eivissa", "Formentera") ~ "Pitiusas",
+    cofradia %in% c("Ciutadella", "Fornells", "Mao") ~ "Menorca",
+    TRUE ~ "otro" # Para valores que no están en los rangos especificados
+  ))
+
+#Contar entrevistas por zona
+recuento_zona <- merged_data_actividades %>%
+  group_by(zona) %>%
+  summarise(recuento = n())
+print(recuento_zona)
+
+#Filtrar las columnas relevantes
+
+likert_data_actividades <- merged_data_actividades %>% 
+  select(zona, Q21a_profesional:Q21m_turismo)
+
+# Renombrar una columna
+likert_data_actividades <- likert_data_actividades %>%
+  dplyr::rename(isla_cofradia = zona)
+
+# Definir los niveles comunes
+common_levels <- c("Very Negative", "Negative", "Neutral","Positive", "Very Positive")
+
+
+# Función para renombrar los niveles de una columna
+rename_levels <- function(column) {
+  column <- as.character(column)
+  column <- case_when(
+    column == "muy negativo" ~ "Very Negative",
+    column == "negativo" ~ "Negative",
+    column == "neutro" ~ "Neutral",
+    column == "positivo" ~ "Positive",
+    column == "muy positivo" ~ "Very Positive",
+    TRUE ~ column  # Caso por defecto para mantener el valor original si no hay coincidencia
+  )
+  factor(column, levels = common_levels)
+}
+
+# Aplicar la función a todas las columnas de interés
+likert_data_actividades[ , -1] <- lapply(likert_data_actividades[ , -1], rename_levels)
+
+# Asegurar que todas las columnas tengan los mismos niveles
+for (col in names(likert_data_actividades)[-1]) {
+  likert_data_actividades[[col]] <- factor(likert_data_actividades[[col]], levels = common_levels)
+}
+
+# Verificar los niveles de cada columna
+lapply(likert_data_actividades, levels)
+
+#convertir en dataframe
+
+likert_data_actividades <- as.data.frame(likert_data_actividades) 
+
+# Especificar la ruta y el nombre del archivo CSV
+ruta_archivo <- "D:/BASES DE DATOS/CAPITULO_01/datos_cap01/datos_limpios_cap01/likert_data_actividades.csv"
+
+# Guardar el dataframe en formato CSV
+write.csv(likert_data_actividades, file = ruta_archivo, row.names = FALSE)
+
+
+#cambiar los nombres de las columnas
+print(colnames(likert_data_actividades))
+
+
+
+# Cambiar los nombres de las columnas
+colnames(likert_data_actividades) <- c(
+  "isla_cofradia",
+  "Industrial Fisheries",
+  "Recreational Spearfishing",
+  "Recreational Boat Fishing",
+  "Recreational Shore Fishing",
+  "Recreational Boats",
+  "Jet Skis",
+  "Scuba Diving",
+  "Other Recreational Activities",
+  "Maritime Transport",
+  "Sewage Outfalls",
+  "Coastal Development",
+  "Beach Users", 
+  "Tourism"
+  
+)
+
+print(colnames(likert_data_actividades))
+
+
+##4.3.Crear gráficos likert por zona----
+# Función para crear gráficos de Likert por isla
+create_likert_chart <- function(data, island_name, common_levels) {
+  # Filtrar los datos por isla
+  island_data <- data %>%
+    filter(isla_cofradia == island_name)
+  
+  # Remover la columna 'isla_cofradia' para el análisis de Likert
+  island_data <- island_data %>% select(-isla_cofradia)
+  
+  # Asegurarse de que todas las columnas tengan los mismos niveles
+  island_data[] <- lapply(island_data, function(column) factor(column, levels = common_levels))
+  
+  # Crear el objeto de Likert
+  likert_obj <- likert(island_data)
+  
+  # Crear el gráfico de Likert
+  plot(likert_obj, group.order = c(
+    "Industrial Fisheries",
+    "Recreational Spearfishing",
+    "Recreational Boat Fishing",
+    "Recreational Shore Fishing",
+    "Recreational Boats",
+    "Jet Skis",
+    "Scuba Diving",
+    "Other Recreational Activities",
+    "Maritime Transport",
+    "Sewage Outfalls",
+    "Coastal Development",
+    "Beach Users", 
+    "Tourism")
+  ) + ggtitle(paste("Likert Chart for Activities", island_name))+
+    theme_minimal(base_size = 15) + 
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+      axis.title.y = element_blank(),
+      axis.text.y = element_text(size = 20, face = "bold"),
+      legend.title = element_blank(),
+      legend.position = "top",
+      legend.text = element_text(size = 20),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA)
+    )
+}
+
+# Nombres de las islas
+island_names <- unique(merged_data_actividades$zona)
+
+
+# Crear una lista para almacenar los gráficos
+likert_plots <- list()
+
+# Crear gráficos de Likert para cada isla
+for (island in island_names) {
+  print(create_likert_chart(likert_data_actividades, island, common_levels))
+}
+
+# Crear gráficos de Likert para cada isla y almacenarlos en la lista
+for (island in island_names) {
+  likert_plots[[island]] <- create_likert_chart(likert_data_actividades, island, common_levels)
+}
+
+#·4.4. Guardar los gráficos con calidad específica----
+width_in_inches <- 14
+height_in_inches <- 8
+for (island in names(likert_plots)) {
+  ggsave(paste0("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_chart_act", island, ".png"), plot = likert_plots[[island]], 
+         dpi = 300, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+}
+
+###4.5. Likert agrupado----
+# Confirmar que 'isla_cofradia' es un factor
+
+
+xlikgroup = likert(likert_data_actividades[,2:14], grouping = likert_data_actividades$isla_cofradia)
+plot(xlikgroup, type = "bar", centered = T)
+
+#·4.4. Guardar los gráficos con calidad específica----
+width_in_inches <- 14
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_todo.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+
+xlikgroup1 = likert(likert_data_actividades[,2:6], grouping = likert_data_actividades$isla_cofradia)
+plot(xlikgroup1, type = "bar", centered = T)
+plot(xlikgroup1, type = "density", centered = F, legend.position = "right")
+#·4.4. Guardar los gráficos con calidad específica----
+width_in_inches <- 14
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_todo_dens.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
