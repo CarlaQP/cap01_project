@@ -711,7 +711,7 @@ for (island in island_names) {
   likert_plots[[island]] <- create_likert_chart(likert_data_actividades, island, common_levels)
 }
 
-#·4.4. Guardar los gráficos con calidad específica----
+##4.4. Guardar los gráficos con calidad específica----
 width_in_inches <- 14
 height_in_inches <- 8
 for (island in names(likert_plots)) {
@@ -719,24 +719,101 @@ for (island in names(likert_plots)) {
          dpi = 300, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 }
 
-###4.5. Likert agrupado----
-# Confirmar que 'isla_cofradia' es un factor
-
+##4.5. Crear Likert agrupado----
+###4.5.1.Likert agrupado todo junto
 
 xlikgroup = likert(likert_data_actividades[,2:14], grouping = likert_data_actividades$isla_cofradia)
-plot(xlikgroup, type = "bar", centered = T)
+xlikgroup
 
-#·4.4. Guardar los gráficos con calidad específica----
+plot(xlikgroup, type = "bar", centered = T)#Se ordena por orden alfabético
+
+###4.5.2 Guardar el gráfico con calidad específica----
 width_in_inches <- 14
 height_in_inches <- 25
 ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_todo.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
 
+###4.5.3.Gráfico densidad todo junto----
+plot(xlikgroup, type = "density", centered = F)
 
-xlikgroup1 = likert(likert_data_actividades[,2:6], grouping = likert_data_actividades$isla_cofradia)
-plot(xlikgroup1, type = "bar", centered = T)
-plot(xlikgroup1, type = "density", centered = F, legend.position = "right")
-#·4.4. Guardar los gráficos con calidad específica----
+###4.5.4 Guardar el gráfico con calidad específica----
 width_in_inches <- 14
 height_in_inches <- 25
 ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_todo_dens.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+###4.5.5 Grafico likert y densidad agrupado por temática----
+####4.5.5.1. Otras pescas----
+
+#grafico likert otras pescas
+xlikgroup1 = likert(likert_data_actividades[,2:5], grouping = likert_data_actividades$isla_cofradia)
+xlikgroup1
+
+
+plot(xlikgroup1, type = "bar", centered = T)
+
+# Guardar los gráficos con calidad específica
+width_in_inches <- 14
+height_in_inches <- 8
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_todo01.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#Grafico densidad rçotras pescas
+plot(xlikgroup1, type = "density", centered = F)
+
+
+# Guardar los gráficos con calidad específica
+width_in_inches <- 14
+height_in_inches <- 8
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_dens01.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+####4.5.5.2. Recreativo no extractivo----
+
+#grafico likert recreativo no extractivo
+xlikgroup2 = likert(likert_data_actividades[c(6:9, 13:14)], grouping = likert_data_actividades$isla_cofradia)
+xlikgroup2
+
+
+plot(xlikgroup2, type = "bar", centered = T)
+
+# Guardar los gráficos con calidad específica
+width_in_inches <- 14
+height_in_inches <- 12
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_todo02.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#Grafico densidad recreativo no extractivo
+plot(xlikgroup2, type = "density", centered = T)
+
+
+# Guardar los gráficos con calidad específica
+width_in_inches <- 14
+height_in_inches <- 12
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_dens02.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+####4.5.5.2. Desarrollo----
+
+#grafico likert desarrollo
+xlikgroup3 = likert(likert_data_actividades[,10:12], grouping = likert_data_actividades$isla_cofradia)
+xlikgroup3
+
+
+plot(xlikgroup3, type = "bar", centered = T)
+
+# Guardar los gráficos con calidad específica
+width_in_inches <- 14
+height_in_inches <- 6
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_todo03.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#Grafico densidad recreativo no extractivo
+plot(xlikgroup3, type = "density", centered = F)
+
+
+# Guardar los gráficos con calidad específica----
+width_in_inches <- 14
+height_in_inches <- 6
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_dens03.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
