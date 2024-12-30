@@ -811,9 +811,742 @@ ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_todo03.png", dpi
 plot(xlikgroup3, type = "density", centered = F)
 
 
-# Guardar los gráficos con calidad específica----
+# Guardar los gráficos con calidad específica
+
+
 width_in_inches <- 14
 height_in_inches <- 6
 ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_act_dens03.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
 
+
+#5.Cambios ambientales####
+##5.1. cargar datos y organizarlos----
+head(all_sheets[["E_ambiental"]])
+head(all_sheets[["A_perfil"]])
+
+# Read the specific sheets into dataframes
+e_ambiental <- read_excel(file_path, sheet = "E_ambiental")
+a_perfil <- read_excel(file_path, sheet = "A_perfil")
+
+# Select the relevant columns from A_perfil
+a_perfil_selected <- a_perfil %>% select(ID, cofradia)
+
+# Merge the dataframes on the ID column
+merged_data_actividades <- e_ambiental %>%
+  left_join(a_perfil_selected, by = "ID")
+
+View(merged_data_actividades)
+
+unique(merged_data_actividades$cofradia)
+
+##5.2. Preparar los datos para el gráfico likert----
+# Crear una nueva columna "zona" basada en los valores de 'cofradia'
+merged_data_ambiental <- merged_data_actividades %>%
+  mutate(zona = case_when(
+    cofradia %in% c("Andratx","Soller", "Pollença") ~ "Mallorca North",
+    cofradia %in% c("Palma", "Colonia de Sant Jordi", "Santanyi", "Portocolom" ) ~ "Mallorca South-West",
+    cofradia %in% c("Alcudia","Cala Ratjada", "Porto Cristo") ~ "Mallorca South-East",
+    cofradia %in% c("San Antoni de Portmany", "Eivissa", "Formentera") ~ "Pitiusas",
+    cofradia %in% c("Ciutadella", "Fornells", "Mao") ~ "Menorca",
+    TRUE ~ "otro" # Para valores que no están en los rangos especificados
+  ))
+
+# Filtrar las columnas relevantes
+likert_data_ambiental <- merged_data_ambiental %>% 
+  select(zona, Q19a_oaire:Q19k_estaciones)
+
+# Función para renombrar los niveles de una columna
+rename_levels <- function(column) {
+  column <- as.character(column)
+  column <- case_when(
+    column == "disminuido" ~ "Decrease",
+    column == "NS/NC" ~ "Don't Know",
+    column == "igual" ~ "No Change",
+    column == "cambio" ~ "Change",
+    column == "aumentado" ~ "Increase",
+    TRUE ~ column  # Caso por defecto para mantener el valor original si no hay coincidencia
+  )
+  factor(column, levels = common_levels)
+}
+
+# Definir los niveles comunes
+common_levels <- c("Decrease", "Don't Know", "No Change", "Change", "Increase")
+
+#Aplicar la función a todas las columnas de interés
+likert_data_ambiental[ , -1] <- lapply(likert_data_ambiental[ , -1], rename_levels)
+
+# Asegurar que todas las columnas tengan los mismos niveles
+for (col in names(likert_data_ambiental)[-1]) {
+  likert_data_ambiental[[col]] <- factor(likert_data_ambiental[[col]], levels = common_levels)
+}
+
+# Verificar los niveles de cada columna
+lapply(likert_data_ambiental, levels)
+
+# Convertir en dataframe
+likert_data_ambiental <- as.data.frame(likert_data_ambiental)  
+
+
+#cambiar los nombres de las columnas
+print(colnames(likert_data_ambiental))
+
+
+
+# Cambiar los nombres de las columnas
+colnames(likert_data_ambiental) <- c(
+  "isla_cofradia",
+  "Air Heat-Waves",
+  "Marine Heat-Waves",
+  "Storm Freq.",
+  "Storms Intensity",
+  "Precipitation",
+  "Sea Temperature",
+  "Current Intensity",
+  "Current Direction",
+  "Wind Intensity",
+  "Wind Direction",
+  "Seasonality"
+)
+
+View(likert_data_ambiental)
+
+## 5.3.Función para crear gráficos de Likert por isla CENTRADO----
+create_likert_chart <- function(data, island_name, common_levels) {
+  # Filtrar los datos por isla
+  island_data <- data %>%
+    filter(isla_cofradia == island_name)
+  
+  # Remover la columna 'isla_cofradia' para el análisis de Likert
+  island_data <- island_data %>% select(-isla_cofradia)
+  
+  # Asegurarse de que todas las columnas tengan los mismos niveles
+  island_data[] <- lapply(island_data, function(column) factor(column, levels = common_levels))
+  
+  # Crear el objeto de Likert
+  likert_obj <- likert(island_data)
+  
+  # Crear el gráfico de Likert
+  plot(likert_obj, plot.percent.low = FALSE, plot.percent.high = FALSE, group.order = c(
+    "Air Heat-Waves",
+    "Marine Heat-Waves",
+    "Sea Temperature",
+    "Precipitation",
+    "Storm Freq.",
+    "Storms Intensity",
+    "Wind Intensity",
+    "Wind Direction",
+    "Current Intensity",
+    "Current Direction",
+    "Seasonality"
+  )) + ggtitle(paste("Likert Chart for", island_name)) +
+    theme_minimal(base_size = 15) + 
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+      axis.title.y = element_blank(),
+      axis.text.y = element_text(size = 20, face = "bold"),
+      legend.title = element_blank(),
+      legend.position = "top",
+      legend.text = element_text(size = 20),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA)
+    )
+}
+
+
+# Nombres de las islas
+island_names <- unique(merged_data_ambiental$zona)
+
+# Crear una lista para almacenar los gráficos
+likert_plots <- list()
+
+# Crear gráficos de Likert para cada isla y almacenarlos en la lista
+for (island in island_names) {
+  likert_plots[[island]] <- create_likert_chart(likert_data_ambiental, island, common_levels)
+}
+
+
+# Imprimir los gráficos
+for (plot in likert_plots) {
+  print(plot)
+}
+
+##5.4. Guardar los gráficos con calidad específica----
+width_in_inches <- 10
+height_in_inches <- 7
+for (island in names(likert_plots)) {
+  ggsave(paste0("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_chart_amb", island, ".png"), plot = likert_plots[[island]], 
+         dpi = 300, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+}
+
+## 5.5.Función para crear gráficos de Likert por isla-NO CENTRADO----
+create_likert_chart <- function(data, island_name, common_levels) {
+  # Filtrar los datos por isla
+  island_data <- data %>%
+    filter(isla_cofradia == island_name)
+  
+  # Remover la columna 'isla_cofradia' para el análisis de Likert
+  island_data <- island_data %>% select(-isla_cofradia)
+  
+  # Asegurarse de que todas las columnas tengan los mismos niveles
+  island_data[] <- lapply(island_data, function(column) factor(column, levels = common_levels))
+  
+  # Crear el objeto de Likert
+  likert_obj <- likert(island_data)
+  
+  # Crear el gráfico de Likert
+  plot(likert_obj, centered = FALSE, plot.percent.low = FALSE, plot.percent.high = FALSE, plot.percent.mid=FALSE, group.order = c(
+    "Air Heat-Waves",
+    "Marine Heat-Waves",
+    "Sea Temperature",
+    "Precipitation",
+    "Storm Freq.",
+    "Storms Intensity",
+    "Wind Intensity",
+    "Wind Direction",
+    "Current Intensity",
+    "Current Direction",
+    "Seasonality"
+  )) + ggtitle(paste("Likert Chart for", island_name)) +
+    theme_minimal(base_size = 15) + 
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+      axis.title.y = element_blank(),
+      axis.text.y = element_text(size = 20, face = "bold"),
+      legend.title = element_blank(),
+      legend.position = "top",
+      legend.text = element_text(size = 20),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA)
+    )
+}
+
+
+# Nombres de las islas
+island_names <- unique(merged_data_ambiental$zona)
+
+# Crear una lista para almacenar los gráficos
+likert_plots <- list()
+
+# Crear gráficos de Likert para cada isla y almacenarlos en la lista
+for (island in island_names) {
+  likert_plots[[island]] <- create_likert_chart(likert_data_ambiental, island, common_levels)
+}
+
+
+# Imprimir los gráficos
+for (plot in likert_plots) {
+  print(plot)
+}
+
+##5.6. Guardar los gráficos con calidad específica----
+width_in_inches <- 10
+height_in_inches <- 7
+for (island in names(likert_plots)) {
+  ggsave(paste0("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_chart_amb2", island, ".png"), plot = likert_plots[[island]], 
+         dpi = 300, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+}
+
+
+
+##5.7. Crear Likert agrupado----
+###5.7.1.Likert agrupado todo junto-CENTRADO
+
+xlikgroup = likert(likert_data_ambiental[,2:12], grouping = likert_data_actividades$isla_cofradia)
+xlikgroup
+
+plot(xlikgroup, type = "bar", centered = T)#Se ordena por orden alfabético
+
+###5.7.2 Guardar el gráfico con calidad específica----
+width_in_inches <- 14
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_amb_todo.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.7.3.Likert agrupado todo junto-NO CENTRADO
+
+xlikgroup = likert(likert_data_ambiental[,2:12], grouping = likert_data_actividades$isla_cofradia)
+xlikgroup
+
+plot(xlikgroup, type = "bar", centered = F)#Se ordena por orden alfabético
+
+###5.7.4 Guardar el gráfico con calidad específica----
+width_in_inches <- 14
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_amb_todo2.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.7.5.Gráfico densidad todo junto----
+plot(xlikgroup, type = "density", centered = F)
+
+xlikgroup
+
+###5.7.6 Guardar el gráfico con calidad específica----
+width_in_inches <- 14
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/likert_amb_todo_dens.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+
+likert_data_ambiental
+
+##5.8 Gráfico calor por cambio individual entre zonas----
+
+likert_data_ambiental <- na.omit(likert_data_ambiental)
+likert_data_ambiental
+
+
+# Definir los niveles comunes de la escala Likert
+common_levels <- c("Decrease", "Don't Know", "No Change", "Change", "Increase")
+
+###5.8.1.Air Heat-Waves----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Air Heat-Waves` <- factor(likert_data_ambiental$`Air Heat-Waves`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Air Heat-Waves`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Air Heat-Waves`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Air Heat-Waves`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Air Heat-Waves'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_AHW.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+###5.8.2.Marine Heat-Waves----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Marine Heat-Waves` <- factor(likert_data_ambiental$`Marine Heat-Waves`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Marine Heat-Waves`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Marine Heat-Waves`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Marine Heat-Waves`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Marine Heat-Waves'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_MHW.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.8.3.Storm Freq.----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Storm Freq.` <- factor(likert_data_ambiental$`Storm Freq.`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Storm Freq.`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Storm Freq.`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Storm Freq.`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Storm Freq.'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_SFQ.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.8.4.Storms Intensity----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Storms Intensity` <- factor(likert_data_ambiental$`Storms Intensity`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Storms Intensity`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Storms Intensity`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Storms Intensity`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Storms Intensity'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_SIN.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.8.5.Precipitation----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Precipitation` <- factor(likert_data_ambiental$`Precipitation`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Precipitation`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Precipitation`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Precipitation`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Precipitation'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_PREC.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.8.6.Sea Temperature----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Sea Temperature` <- factor(likert_data_ambiental$`Sea Temperature`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Sea Temperature`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Sea Temperature`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Sea Temperature`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Sea Temperature'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_STEMP.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.8.7.Current Intensity----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Current Intensity` <- factor(likert_data_ambiental$`Current Intensity`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Current Intensity`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Current Intensity`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Current Intensity`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Current Intensity'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_CINT.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.8.8.Current Direction----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Current Direction` <- factor(likert_data_ambiental$`Current Direction`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Current Direction`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Current Direction`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Current Direction`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Current Direction'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_CDIR.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+###5.8.9.Wind Intensity----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Wind Intensity` <- factor(likert_data_ambiental$`Wind Intensity`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Wind Intensity`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Wind Intensity`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Wind Intensity`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Wind Intensity'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_WINT.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+###5.8.10.Wind Direction----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Wind Direction` <- factor(likert_data_ambiental$`Wind Direction`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Wind Direction`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Wind Direction`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Wind Direction`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Wind Direction'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_WDIR.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+###5.8.11.Seasonality----
+
+# Asegurarnos de que la columna `Air Heat-Waves` tenga los niveles definidos
+likert_data_ambiental$`Seasonality` <- factor(likert_data_ambiental$`Seasonality`, levels = common_levels)
+
+# Calcular la frecuencia de respuestas por zona y nivel de Likert
+heatmap_data <- likert_data_ambiental %>%
+  group_by(isla_cofradia, `Seasonality`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  complete(isla_cofradia, `Seasonality`, fill = list(count = 0)) %>%  # Rellenar combinaciones faltantes
+  group_by(isla_cofradia) %>%  # Agrupar por isla_cofradia
+  mutate(percent = (count / sum(count)) * 100)  # Calcular porcentaje
+
+# Crear el heatmap
+ggplot(heatmap_data, aes(x = `Seasonality`, y = isla_cofradia, fill = percent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkblue", 
+                      limits = c(0, 100),  # Escala fija de 0 a 100
+                      name = "Percent") +
+  geom_text(aes(label = sprintf("%.1f%%", percent)), color = "black", size = 4) +  # Etiquetas de porcentaje
+  labs(
+    title = "Heatmap respuestas 'Seasonality'",
+    x = "",
+    y = ""
+  )+
+  theme_bw()+
+  theme(
+    plot.title = element_text(size = 18),         # Tamaño del título
+    axis.title.x = element_text(size = 14),      # Tamaño de la etiqueta del eje X
+    axis.title.y = element_text(size = 14),      # Tamaño de la etiqueta del eje Y
+    axis.text.x = element_text(size = 12),  # Tamaño y rotación del texto del eje X
+    axis.text.y = element_text(size = 12),       # Tamaño del texto del eje Y
+    legend.title = element_text(size = 14),      # Tamaño del título de la leyenda
+    legend.text = element_text(size = 12)        # Tamaño del texto de la leyenda
+  )
+
+#Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 2.5
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_SEAS.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
