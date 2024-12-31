@@ -25,7 +25,7 @@ ruta_base_limpios <- "D:/BASES DE DATOS/CAPITULO_01/datos_cap01/datos_limpios_ca
 ## 1.3. Importar Excel de la BD ----
 
 # Crear la ruta completa del archivo
-file_path <- paste0(ruta_base, "BIOTRANS_dataset2.0_v1_0924.xlsx")
+file_path <- paste0(ruta_base, "BIOTRANS_dataset2.0_v2_311224.xlsx")
 
 # Obtener los nombres de todas las hojas del excel
 sheet_names <- getSheetNames(file_path)
@@ -1550,3 +1550,171 @@ ggplot(heatmap_data, aes(x = `Seasonality`, y = isla_cofradia, fill = percent)) 
 width_in_inches <- 10
 height_in_inches <- 2.5
 ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/heat_SEAS.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+#6. Cambios en las especies####
+##6.1. cargar datos y organizarlos----
+head(all_sheets[["C_especies"]])
+head(all_sheets[["A_perfil"]])
+
+# Read the specific sheets into dataframes
+e_especies <- read_excel(file_path, sheet = "C_especies")
+a_perfil <- read_excel(file_path, sheet = "A_perfil")
+
+# Select the relevant columns from A_perfil
+a_perfil_selected <- a_perfil %>% select(ID, cofradia)
+
+# Merge the dataframes on the ID column
+merged_data_especies <- e_especies %>%
+  left_join(a_perfil_selected, by = "ID")
+
+View(merged_data_especies)
+
+unique(merged_data_especies$sp_cien)
+
+# Crear una nueva columna "zona" basada en los valores de 'cofradia'
+merged_data_especies <- merged_data_especies %>%
+  mutate(zona = case_when(
+    cofradia %in% c("Andratx","Soller", "Pollença") ~ "Mallorca North",
+    cofradia %in% c("Palma", "Colonia de Sant Jordi", "Santanyi", "Portocolom" ) ~ "Mallorca South-West",
+    cofradia %in% c("Alcudia","Cala Ratjada", "Porto Cristo") ~ "Mallorca South-East",
+    cofradia %in% c("San Antoni de Portmany", "Eivissa", "Formentera") ~ "Pitiusas",
+    cofradia %in% c("Ciutadella", "Fornells", "Mao") ~ "Menorca",
+    TRUE ~ "otro" # Para valores que no están en los rangos especificados
+  ))
+
+# Eliminar NAs en sp_cien, abundancia y tamaño 
+filtered_especies <- merged_data_especies %>%
+  filter(sp_cien != "NA")
+
+filtered_especies_abundancia <- filtered_especies %>%
+  filter(abundancia != "NA")
+View(filtered_especies_abundancia)
+
+filtered_especies_talla <- filtered_especies %>%
+  filter(talla != "NA")
+
+
+##6.2.Gráficos abundancias----
+###6.2.1.Preparar datos
+# Filtrar especies que salen al menos 2 veces
+result_species_abundancia <- filtered_especies_abundancia %>%
+  group_by(sp_cien) %>%
+  filter(n() >= 2) %>%
+  ungroup()
+
+# Convertir la columna de abundancia a factor para mantener el orden deseado y cambiar los niveles a inglés
+result_species_abundancia$abundancia <- factor(result_species_abundancia$abundancia, levels = c("menor", "igual", "mayor"),
+                                    labels = c("Decrease", "No Change", "Increase"))
+
+# Definir colores personalizados
+colors_fill <- c("Decrease" = "#F45C1C", 
+                 "No Change" = "grey", 
+                 "Increase" = "#33BDB7")
+
+###6.2.2. Crear gráfico por zona----
+####6.2.2.1.Pitiusas
+# Filtrar los datos para la zona específica
+pitiusas_data_ab <- result_species_abundancia %>% filter(zona == "Pitiusas")
+
+# Crear una tabla resumen para obtener el conteo de cada combinación
+data_summary_pitiusas <- pitiusas_data_ab %>%
+  count(sp_cien, abundancia) %>%
+  pivot_wider(names_from = abundancia, values_from = n, values_fill = list(n = 0))
+data_summary_pitiusas$"No Change" <- 0
+
+# Calcular el total de N para cada especie
+data_summary_pitiusas$total <- rowSums(data_summary_pitiusas[,-1])
+
+# Ordenar las especies por el total de mayor a menor
+data_summary_pitiusas <- data_summary_pitiusas %>%
+  arrange(desc(total))
+
+# Convertir la tabla resumen a formato largo para ggplot
+data_long <- data_summary_pitiusas %>%
+  pivot_longer(cols = -c(sp_cien, total), names_to = "abundancia", values_to = "count")
+
+# Reorganizar los nombres de las especies en orden descendente
+data_long$sp_cien <- factor(data_long$sp_cien, levels = rev(data_summary_pitiusas$sp_cien))
+
+# Asegurar que los niveles de abundancia se respeten en el orden deseado
+data_long$abundancia <- factor(data_long$abundancia, levels = c("Decrease", "No Change", "Increase"))
+
+# Crear el gráfico de barras apiladas horizontal con ggplot2
+ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "black", linewidth = 0.3) +
+  
+  labs(title = "Cambios en las especies - Isla Zona1",
+       subtitle = "Distribución de observaciones por tipo de cambio",
+       x = "Número de Observaciones",
+       y = "Especie",
+       fill = "Tipo de Cambio") +
+  scale_fill_manual(values = colors_fill, 
+                    breaks = c("Decrease", "No Change", "Increase")) +
+  theme_minimal(base_size = 20) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "gray50")
+
+
+# Filtrar los datos para dentex
+pitiusas_data_ab <- result_species_abundancia %>% filter(zona == "Pitiusas")
+pitiusas_data_dentex <- pitiusas_data_ab %>% filter(sp_cien == "Dentex dentex")
+
+# Separar los datos en "Increase" y "Decrease"
+increase_data <- data_long %>% filter(abundancia == "Increase")
+decrease_data <- data_long %>% filter(abundancia == "Decrease")
+
+# Gráfico para "Increase"
+ggplot(increase_data, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "black", linewidth = 0.3) +
+  labs(title = "Especies con aumento ('Increase') - Zona1",
+       x = "Número de Observaciones",
+       y = "Especie",
+       fill = "Tipo de Cambio") +
+  scale_fill_manual(values = colors_fill, breaks = c("Increase")) +
+  theme_minimal(base_size = 20) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  )
+
+# Gráfico para "Decrease"
+ggplot(decrease_data, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "black", linewidth = 0.3) +
+  labs(title = "Especies con disminución ('Decrease') - Zona1",
+       x = "Número de Observaciones",
+       y = "Especie",
+       fill = "Tipo de Cambio") +
+  scale_fill_manual(values = colors_fill, breaks = c("Decrease")) +
+  theme_minimal(base_size = 20) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  )
+
+
+
