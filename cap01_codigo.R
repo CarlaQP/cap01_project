@@ -1599,7 +1599,7 @@ lista_especies <- c("Spicara smaris", "Mullus surmuletus", "Trachurus ssp.", "Oc
 
 
 ##6.2.Gráficos abundancias----
-###6.2.1.Preparar datos
+###6.2.1.Preparar datos----
 
 # Convertir la columna de abundancia a factor para mantener el orden deseado y cambiar los niveles a inglés
 filtered_especies$abundancia <- factor(filtered_especies$abundancia, levels = c("menor", "igual", "mayor"),
@@ -1617,6 +1617,9 @@ df_completo <- data.frame(
   Decrease = 0,
   Increase = 0,
 )
+
+#grafico sp. interes-Piiusas
+sp_filtrar <- c("Coryphaena hippurus", "Scorpaena scrofa", "Sepia officinalis", "Palinurus elephas", "Seriola dumerili", "Dentex dentex", "Scorpaena porcus", "Pagrus pagrus", "Octopus vulgaris", "Aphia minuta", "Spicara maena", "Thunnus thynnus", "Spondyliosoma cantharus", "Epinephelus marginatus", "Lophius spp.", "Euthynnus alletteratus", "Zeus faber")
 
 ###6.2.2. Crear gráfico por zona----
 ####6.2.2.1.Pitiusas----
@@ -1687,6 +1690,52 @@ ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
 width_in_inches <- 10
 height_in_inches <- 25
 ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_pitiusas.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#epesenta solo sp_inte
+
+# Filtrar el dataframe
+data_long_filtro_pitiusas <- data_long %>%
+  filter(sp_cien %in% sp_filtrar)
+
+
+
+ggplot(data_long_filtro_pitiusas, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Pitiusas",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
+  theme_minimal(base_size = 28) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 8
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_pitiusas_pesca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
 
 ####6.2.2.2.Menorca----
 # Filtrar los datos para la zona específica
@@ -1770,6 +1819,52 @@ menorca_data_dentex <- menorca_data_ab %>% filter(sp_cien == "Dentex dentex")
 menorca_data_scorpaena <- menorca_data_ab %>% filter(sp_cien == "Scorpaena scrofa")
 menorca_data_spondylosoma <- menorca_data_ab %>% filter(sp_cien == "Spondyliosoma cantharus")
 
+#Repesentar solo sp_interes
+
+# Filtrar el dataframe
+data_long_filtro_menorca <- data_long %>%
+  filter(sp_cien %in% sp_filtrar)
+
+
+
+ggplot(data_long_filtro_menorca, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Menorca",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
+  theme_minimal(base_size = 28) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 8
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_menorca_pesca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+
+
 ####6.2.2.3.Mallorca North----
 
 # Filtrar los datos para la zona específica
@@ -1851,6 +1946,51 @@ mnorth_data_mullus <- mnorth_data_ab %>% filter(sp_cien == "Mullus surmuletus")
 mnorth_data_scorpaena <- mnorth_data_ab %>% filter(sp_cien == "Scorpaena scrofa")
 mnorth_data_sepia <- mnorth_data_ab %>% filter(sp_cien == "Sepia officinalis")
 
+#Repesentar solo sp_interes
+
+# Filtrar el dataframe
+data_long_filtro_mnord <- data_long %>%
+  filter(sp_cien %in% sp_filtrar)
+
+
+
+ggplot(data_long_filtro_mnord, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Mallorca North",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
+  theme_minimal(base_size = 28) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 8
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_mnord_pesca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+
 ####6.2.2.4.Mallorca South-West----
 
 # Filtrar los datos para la zona específica
@@ -1928,6 +2068,51 @@ meast_data_epinephelus <- meast_data_ab %>% filter(sp_cien == "Epinephelus margi
 meast_data_mullus <- meast_data_ab %>% filter(sp_cien == "Mullus surmuletus")
 meast_data_palinurus <- meast_data_ab %>% filter(sp_cien == "Palinurus elephas")
 
+
+#Repesentar solo sp_interes
+
+# Filtrar el dataframe
+data_long_filtro_mswest <- data_long %>%
+  filter(sp_cien %in% sp_filtrar)
+
+
+
+ggplot(data_long_filtro_mswest, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Mallorca South-West",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
+  theme_minimal(base_size = 28) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 8
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_mswest_pesca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
 ####6.2.2.4.Mallorca South-East----
 
 # Filtrar los datos para la zona específica
@@ -2004,4 +2189,47 @@ ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_meast.png", dpi = 310, w
 meast_data_aphia <- meast_data_ab %>% filter(sp_cien == "Aphia minuta")
 meast_data_mullus <- meast_data_ab %>% filter(sp_cien == "Mullus surmuletus")
 meast_data_palinurus <- meast_data_ab %>% filter(sp_cien == "Palinurus elephas")
+
+#Repesentar solo sp_interes
+
+# Filtrar el dataframe
+data_long_filtro_meast <- data_long %>%
+  filter(sp_cien %in% sp_filtrar)
+
+
+
+ggplot(data_long_filtro_meast, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Mallorca South-East",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
+  theme_minimal(base_size = 28) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 8
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_meast_pesca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
