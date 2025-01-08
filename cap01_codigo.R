@@ -1582,28 +1582,27 @@ merged_data_especies <- merged_data_especies %>%
     TRUE ~ "otro" # Para valores que no están en los rangos especificados
   ))
 
-# Eliminar NAs en sp_cien, abundancia y tamaño 
+# Eliminar NAs en sp_cien y abundancia 
 filtered_especies <- merged_data_especies %>%
   filter(sp_cien != "NA")
 
-filtered_especies_abundancia <- filtered_especies %>%
+filtered_especies <- filtered_especies %>%
   filter(abundancia != "NA")
-View(filtered_especies_abundancia)
 
-filtered_especies_talla <- filtered_especies %>%
-  filter(talla != "NA")
+# Obtener las especies únicas
+especies_unicas <- unique(filtered_especies$sp_cien)
+lista_especies <- paste0("c(", paste(shQuote(especies_unicas), collapse = ", "), ")")
+cat(lista_especies)
+lista_especies <- c("Spicara smaris", "Mullus surmuletus", "Trachurus ssp.", "Octopus vulgaris", "Dentex dentex", "Dasyatis pastinaca", "Scyliorhinus canicula", "Epinephelus marginatus", "Scorpaena scrofa", "Pagrus pagrus", "Palinurus elephas", "Rostroraja alba", "Gymnura altavela", "Cnidaria spp.", "Sepia officinalis", "Coryphaena hippurus", "Zeus faber", "Aristeus antennatus", "Nephrops norvegicus", "Scorpaena porcus", "Raja spp.", "Lophius spp.", "Labrus spp.", "Pagellus bogaraveo", "Chlorophyta sp.", "Balistes capriscus", "Loligo vulgaris", "Ostrea edulis", "Arca noae", "Lithophaga lithophaga", "Aphia minuta", "Pinna nobilis", "Bivalvia spp.", "Mollusca spp.", "Diplodus sargus", "Sparus aurata", "Maja squinado", "Melicertus kerathurus", "Uranoscopus scaber", "Sciaena umbra", "Amphipods & Isopods", "Thunnus thynnus", "Seriola dumerili", "Scyllarides latus", "Tursiops truncatus", "Scomber scombrus", "Raja clavata", "Sphyraena spp.", "Salpidae spp.", "Serranus scriba", "Sarda sarda", "Engraulis encrasicolus", "Epinephelus costae", "Trachinus ssp.", "Bothus podas", "Xyrichtys novacula", "Phycis spp.", "Belone belone", "Squatina squatina", "Argyrosomus regius", "Auxis rochei", "Euthynnus alletteratus", "Thunnus alalunga", "Scyliorhinus stellaris", "Mustelus mustelus", "Spondyliosoma cantharus", "Laminaria rodriguezii", "Spicara maena", "Pelagia noctiluca", "Muraena helena", "Dactylopterus volitans ", "Naucrates ductor", "Polyprion americanus", "Chelonioidea spp.", "Chelidonichthys lucerna", "Brachyura spp.", "Ensis magnus", "Donax trunculus")
+
+
 
 
 ##6.2.Gráficos abundancias----
 ###6.2.1.Preparar datos
-# Filtrar especies que salen al menos 2 veces
-result_species_abundancia <- filtered_especies_abundancia %>%
-  group_by(sp_cien) %>%
-  filter(n() >= 2) %>%
-  ungroup()
 
 # Convertir la columna de abundancia a factor para mantener el orden deseado y cambiar los niveles a inglés
-result_species_abundancia$abundancia <- factor(result_species_abundancia$abundancia, levels = c("menor", "igual", "mayor"),
+filtered_especies$abundancia <- factor(filtered_especies$abundancia, levels = c("menor", "igual", "mayor"),
                                     labels = c("Decrease", "No Change", "Increase"))
 
 # Definir colores personalizados
@@ -1611,45 +1610,64 @@ colors_fill <- c("Decrease" = "#F45C1C",
                  "No Change" = "grey", 
                  "Increase" = "#33BDB7")
 
+
+# Crear un dataframe con todas las especies de la lista y valores 0 por defecto
+df_completo <- data.frame(
+  sp_cien = lista_especies,
+  Decrease = 0,
+  Increase = 0,
+)
+
 ###6.2.2. Crear gráfico por zona----
-####6.2.2.1.Pitiusas
+####6.2.2.1.Pitiusas----
 # Filtrar los datos para la zona específica
-pitiusas_data_ab <- result_species_abundancia %>% filter(zona == "Pitiusas")
+pitiusas_data_ab <- filtered_especies %>% filter(zona == "Pitiusas")
 
 # Crear una tabla resumen para obtener el conteo de cada combinación
 data_summary_pitiusas <- pitiusas_data_ab %>%
   count(sp_cien, abundancia) %>%
   pivot_wider(names_from = abundancia, values_from = n, values_fill = list(n = 0))
-data_summary_pitiusas$"No Change" <- 0
 
-# Calcular el total de N para cada especie
-data_summary_pitiusas$total <- rowSums(data_summary_pitiusas[,-1])
 
-# Ordenar las especies por el total de mayor a menor
-data_summary_pitiusas <- data_summary_pitiusas %>%
-  arrange(desc(total))
+# Combinar con el dataframe original
+df_completo_pitiusas <- merge(df_completo, data_summary_pitiusas, by = "sp_cien", all.x = TRUE)
+df_completo_pitiusas <- df_completo_pitiusas[, -c(2:4)]
+colnames(df_completo_pitiusas) <- c("sp_cien", "Decrease", "Increase")
+
+df_completo_pitiusas$Decrease[is.na(df_completo_pitiusas$Decrease)] <- 0
+df_completo_pitiusas$Increase[is.na(df_completo_pitiusas$Increase)] <- 0
+
+# Crear un nuevo dataframe con las proporciones
+df_proporcion_pitiusas <- df_completo_pitiusas
+
+# Dividir todas las columnas numéricas por 17
+df_proporcion_pitiusas[, -1] <- (df_proporcion_pitiusas[, -1] / 17) * 100
+
 
 # Convertir la tabla resumen a formato largo para ggplot
-data_long <- data_summary_pitiusas %>%
-  pivot_longer(cols = -c(sp_cien, total), names_to = "abundancia", values_to = "count")
+data_long <- df_proporcion_pitiusas %>%
+  pivot_longer(cols = -c(sp_cien), names_to = "abundancia", values_to = "count")
 
-# Reorganizar los nombres de las especies en orden descendente
-data_long$sp_cien <- factor(data_long$sp_cien, levels = rev(data_summary_pitiusas$sp_cien))
+data_long$count <- ifelse(data_long$abundancia == "Decrease", -abs(data_long$count), abs(data_long$count))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = rev(unique(data_long$sp_cien)))
 
 # Asegurar que los niveles de abundancia se respeten en el orden deseado
-data_long$abundancia <- factor(data_long$abundancia, levels = c("Decrease", "No Change", "Increase"))
-
-# Crear el gráfico de barras apiladas horizontal con ggplot2
+data_long$abundancia <- factor(data_long$abundancia, levels = c("Decrease", "Increase"))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = sort(unique(data_long$sp_cien)))
 ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
-  geom_bar(stat = "identity", color = "black", linewidth = 0.3) +
-  
-  labs(title = "Cambios en las especies - Isla Zona1",
-       subtitle = "Distribución de observaciones por tipo de cambio",
-       x = "Número de Observaciones",
-       y = "Especie",
-       fill = "Tipo de Cambio") +
-  scale_fill_manual(values = colors_fill, 
-                    breaks = c("Decrease", "No Change", "Increase")) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Pitiusas",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "Especie",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+    scale_x_continuous(labels = percent_format(scale = 1),
+                       limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
   theme_minimal(base_size = 20) +
   theme(
     plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
@@ -1663,28 +1681,73 @@ ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
     panel.background = element_rect(fill = "white", color = NA),
     plot.background = element_rect(fill = "white", color = NA)
   ) +
-  geom_vline(xintercept = 0.5, linetype = "dashed", color = "gray50")
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_pitiusas.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+####6.2.2.2.Menorca----
+# Filtrar los datos para la zona específica
+menorca_data_ab <- filtered_especies %>% filter(zona == "Menorca")
+
+# Crear una tabla resumen para obtener el conteo de cada combinación
+data_summary_menorca <- menorca_data_ab %>%
+  count(sp_cien, abundancia) %>%
+  pivot_wider(names_from = abundancia, values_from = n, values_fill = list(n = 0))
 
 
-# Filtrar los datos para dentex
-pitiusas_data_ab <- result_species_abundancia %>% filter(zona == "Pitiusas")
-pitiusas_data_dentex <- pitiusas_data_ab %>% filter(sp_cien == "Dentex dentex")
+# Crear un dataframe con todas las especies de la lista y valores 0 por defecto
+df_completo <- data.frame(
+  sp_cien = lista_especies,
+  Decrease = 0,
+  Increase = 0,
+)
 
-# Separar los datos en "Increase" y "Decrease"
-increase_data <- data_long %>% filter(abundancia == "Increase")
-decrease_data <- data_long %>% filter(abundancia == "Decrease")
+# Combinar con el dataframe original
+df_completo_menorca <- merge(df_completo, data_summary_menorca, by = "sp_cien", all.x = TRUE)
+df_completo_menorca <- df_completo_menorca[, -c(2:4)]
+colnames(df_completo_menorca) <- c("sp_cien", "Increase", "Decrease")
 
-# Gráfico para "Increase"
-ggplot(increase_data, aes(y = sp_cien, x = count, fill = abundancia)) +
-  geom_bar(stat = "identity", color = "black", linewidth = 0.3) +
-  labs(title = "Especies con aumento ('Increase') - Zona1",
-       x = "Número de Observaciones",
-       y = "Especie",
-       fill = "Tipo de Cambio") +
-  scale_fill_manual(values = colors_fill, breaks = c("Increase")) +
+df_completo_menorca$Decrease[is.na(df_completo_menorca$Decrease)] <- 0
+df_completo_menorca$Increase[is.na(df_completo_menorca$Increase)] <- 0
+
+# Crear un nuevo dataframe con las proporciones
+df_proporcion_menorca <- df_completo_menorca
+
+# Dividir todas las columnas numéricas por 16
+df_proporcion_menorca[, -1] <- (df_proporcion_menorca[, -1] / 16) * 100
+
+
+# Convertir la tabla resumen a formato largo para ggplot
+data_long <- df_proporcion_menorca %>%
+  pivot_longer(cols = -c(sp_cien), names_to = "abundancia", values_to = "count")
+
+data_long$count <- ifelse(data_long$abundancia == "Decrease", -abs(data_long$count), abs(data_long$count))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = rev(unique(data_long$sp_cien)))
+
+# Asegurar que los niveles de abundancia se respeten en el orden deseado
+data_long$abundancia <- factor(data_long$abundancia, levels = c("Decrease", "Increase"))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = sort(unique(data_long$sp_cien)))
+ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Menorca",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "Especie",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
   theme_minimal(base_size = 20) +
   theme(
     plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
     axis.title.y = element_text(face = "italic", size = 24),
     axis.title.x = element_text(size = 20),
     axis.text.y = element_text(face = "italic"),
@@ -1693,19 +1756,74 @@ ggplot(increase_data, aes(y = sp_cien, x = count, fill = abundancia)) +
     legend.text = element_text(size = 20),
     panel.background = element_rect(fill = "white", color = NA),
     plot.background = element_rect(fill = "white", color = NA)
-  )
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
 
-# Gráfico para "Decrease"
-ggplot(decrease_data, aes(y = sp_cien, x = count, fill = abundancia)) +
-  geom_bar(stat = "identity", color = "black", linewidth = 0.3) +
-  labs(title = "Especies con disminución ('Decrease') - Zona1",
-       x = "Número de Observaciones",
-       y = "Especie",
-       fill = "Tipo de Cambio") +
-  scale_fill_manual(values = colors_fill, breaks = c("Decrease")) +
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_menorca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#Revisar especies con contradicciones
+menorca_data_dentex <- menorca_data_ab %>% filter(sp_cien == "Dentex dentex")
+menorca_data_scorpaena <- menorca_data_ab %>% filter(sp_cien == "Scorpaena scrofa")
+menorca_data_spondylosoma <- menorca_data_ab %>% filter(sp_cien == "Spondyliosoma cantharus")
+
+####6.2.2.3.Mallorca North----
+
+# Filtrar los datos para la zona específica
+mnorth_data_ab <- filtered_especies %>% filter(zona == "Mallorca North")
+
+# Crear una tabla resumen para obtener el conteo de cada combinación
+data_summary_mnorth <- mnorth_data_ab %>%
+  count(sp_cien, abundancia) %>%
+  pivot_wider(names_from = abundancia, values_from = n, values_fill = list(n = 0))
+
+
+# Combinar con el dataframe original
+df_completo_mnorth <- merge(df_completo, data_summary_mnorth, by = "sp_cien", all.x = TRUE)
+df_completo_mnorth <- df_completo_mnorth[, -c(2:4)]
+colnames(df_completo_mnorth) <- c("sp_cien", "Increase", "Decrease")
+
+df_completo_mnorth$Decrease[is.na(df_completo_mnorth$Decrease)] <- 0
+df_completo_mnorth$Increase[is.na(df_completo_mnorth$Increase)] <- 0
+
+# Crear un nuevo dataframe con las proporciones
+df_proporcion_mnorth <- df_completo_mnorth
+
+# Dividir todas las columnas numéricas por 16
+df_proporcion_mnorth[, -1] <- (df_proporcion_mnorth[, -1] / 11) * 100
+
+
+# Convertir la tabla resumen a formato largo para ggplot
+data_long <- df_proporcion_mnorth %>%
+  pivot_longer(cols = -c(sp_cien), names_to = "abundancia", values_to = "count")
+
+data_long$count <- ifelse(data_long$abundancia == "Decrease", -abs(data_long$count), abs(data_long$count))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = rev(unique(data_long$sp_cien)))
+
+# Asegurar que los niveles de abundancia se respeten en el orden deseado
+data_long$abundancia <- factor(data_long$abundancia, levels = c("Decrease", "Increase"))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = sort(unique(data_long$sp_cien)))
+ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Mallorca North",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "Especie",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
   theme_minimal(base_size = 20) +
   theme(
     plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
     axis.title.y = element_text(face = "italic", size = 24),
     axis.title.x = element_text(size = 20),
     axis.text.y = element_text(face = "italic"),
@@ -1714,7 +1832,176 @@ ggplot(decrease_data, aes(y = sp_cien, x = count, fill = abundancia)) +
     legend.text = element_text(size = 20),
     panel.background = element_rect(fill = "white", color = NA),
     plot.background = element_rect(fill = "white", color = NA)
-  )
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_mnorth.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
 
+#Revisar especies con contradicciones
+
+mnorth_data_aphia <- mnorth_data_ab %>% filter(sp_cien == "Aphia minuta")
+mnorth_data_coryphaena <- mnorth_data_ab %>% filter(sp_cien == "Coryphaena hippurus")
+mnorth_data_dentex <- mnorth_data_ab %>% filter(sp_cien == "Dentex dentex")
+mnorth_data_epinephelus <- mnorth_data_ab %>% filter(sp_cien == "Epinephelus marginatus")
+mnorth_data_mullus <- mnorth_data_ab %>% filter(sp_cien == "Mullus surmuletus")
+mnorth_data_scorpaena <- mnorth_data_ab %>% filter(sp_cien == "Scorpaena scrofa")
+mnorth_data_sepia <- mnorth_data_ab %>% filter(sp_cien == "Sepia officinalis")
+
+####6.2.2.4.Mallorca South-West----
+
+# Filtrar los datos para la zona específica
+meast_data_ab <- filtered_especies %>% filter(zona == "Mallorca South-West")
+
+# Crear una tabla resumen para obtener el conteo de cada combinación
+data_summary_meast <- meast_data_ab %>%
+  count(sp_cien, abundancia) %>%
+  pivot_wider(names_from = abundancia, values_from = n, values_fill = list(n = 0))
+data_summary_meast <- data_summary_meast [, -c(4)]
+
+
+# Combinar con el dataframe original
+df_completo_meast <- merge(df_completo, data_summary_meast, by = "sp_cien", all.x = TRUE)
+df_completo_meast <- df_completo_meast[, -c(2:4)]
+colnames(df_completo_meast) <- c("sp_cien",  "Decrease", "Increase")
+
+df_completo_meast$Decrease[is.na(df_completo_meast$Decrease)] <- 0
+df_completo_meast$Increase[is.na(df_completo_meast$Increase)] <- 0
+
+# Crear un nuevo dataframe con las proporciones
+df_proporcion_meast <- df_completo_meast
+
+# Dividir todas las columnas numéricas por 16
+df_proporcion_meast[, -1] <- (df_proporcion_meast[, -1] / 17) * 100
+
+
+# Convertir la tabla resumen a formato largo para ggplot
+data_long <- df_proporcion_meast %>%
+  pivot_longer(cols = -c(sp_cien), names_to = "abundancia", values_to = "count")
+
+data_long$count <- ifelse(data_long$abundancia == "Decrease", -abs(data_long$count), abs(data_long$count))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = rev(unique(data_long$sp_cien)))
+
+# Asegurar que los niveles de abundancia se respeten en el orden deseado
+data_long$abundancia <- factor(data_long$abundancia, levels = c("Decrease", "Increase"))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = sort(unique(data_long$sp_cien)))
+ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Mallorca South-West",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "Especie",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
+  theme_minimal(base_size = 20) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_mswest.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#Revisar especies con contradicciones
+meast_data_epinephelus <- meast_data_ab %>% filter(sp_cien == "Epinephelus marginatus")
+meast_data_mullus <- meast_data_ab %>% filter(sp_cien == "Mullus surmuletus")
+meast_data_palinurus <- meast_data_ab %>% filter(sp_cien == "Palinurus elephas")
+
+####6.2.2.4.Mallorca South-East----
+
+# Filtrar los datos para la zona específica
+meast_data_ab <- filtered_especies %>% filter(zona == "Mallorca South-East")
+
+# Crear una tabla resumen para obtener el conteo de cada combinación
+data_summary_meast <- meast_data_ab %>%
+  count(sp_cien, abundancia) %>%
+  pivot_wider(names_from = abundancia, values_from = n, values_fill = list(n = 0))
+data_summary_meast <- data_summary_meast [, -c(4)]
+
+
+# Combinar con el dataframe original
+df_completo_meast <- merge(df_completo, data_summary_meast, by = "sp_cien", all.x = TRUE)
+df_completo_meast <- df_completo_meast[, -c(2:4)]
+colnames(df_completo_meast) <- c("sp_cien",  "Decrease", "Increase")
+
+df_completo_meast$Decrease[is.na(df_completo_meast$Decrease)] <- 0
+df_completo_meast$Increase[is.na(df_completo_meast$Increase)] <- 0
+
+# Crear un nuevo dataframe con las proporciones
+df_proporcion_meast <- df_completo_meast
+
+# Dividir todas las columnas numéricas por 16
+df_proporcion_meast[, -1] <- (df_proporcion_meast[, -1] / 14) * 100
+
+
+# Convertir la tabla resumen a formato largo para ggplot
+data_long <- df_proporcion_meast %>%
+  pivot_longer(cols = -c(sp_cien), names_to = "abundancia", values_to = "count")
+
+data_long$count <- ifelse(data_long$abundancia == "Decrease", -abs(data_long$count), abs(data_long$count))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = rev(unique(data_long$sp_cien)))
+
+# Asegurar que los niveles de abundancia se respeten en el orden deseado
+data_long$abundancia <- factor(data_long$abundancia, levels = c("Decrease", "Increase"))
+data_long$sp_cien <- factor(data_long$sp_cien, levels = sort(unique(data_long$sp_cien)))
+ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
+  geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
+  labs(
+    title = "Cambios en las especies - Mallorca South-East",
+    subtitle = "Porcentaje de respuestas por tipo de cambio",
+    x = "",
+    y = "Especie",
+    fill = ""
+  ) +
+  scale_fill_manual(
+    values = colors_fill, 
+    breaks = c("Decrease", "Increase"))+
+  scale_x_continuous(labels = percent_format(scale = 1),
+                     limits = c(-60, 60)) + # Fijar límites de -60 a 60) 
+  theme_minimal(base_size = 20) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title.y = element_text(face = "italic", size = 24),
+    axis.title.x = element_text(size = 20),
+    axis.text.y = element_text(face = "italic"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  geom_vline(xintercept = 0.0, linetype = "dashed", color = "gray50")
+
+###Guardar el gráfico con calidad específica
+width_in_inches <- 10
+height_in_inches <- 25
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_meast.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#Revisar especies con contradicciones
+meast_data_aphia <- meast_data_ab %>% filter(sp_cien == "Aphia minuta")
+meast_data_mullus <- meast_data_ab %>% filter(sp_cien == "Mullus surmuletus")
+meast_data_palinurus <- meast_data_ab %>% filter(sp_cien == "Palinurus elephas")
 
