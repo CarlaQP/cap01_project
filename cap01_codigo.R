@@ -3,7 +3,7 @@
 #1.Tratamiento inicial ####
 ##1.1. Instalar paquetes (con condicional) y cargar librerias ----
 
-packages <- c("lwgeom", "osmdata", "sf", "tidyverse", "readr", "ggspatial", "readxl", "openxlsx", "dplyr", "Polychrome", "scales", "gridExtra", "fmsb", "likert", "reshape")
+packages <- c("lwgeom", "osmdata", "sf", "tidyverse", "readr", "ggspatial", "readxl", "openxlsx", "dplyr", "Polychrome", "scales", "gridExtra", "fmsb", "likert", "reshape", "webr")
 
 install_if_missing <- function(pkg) {
   if (!require(pkg, character.only = TRUE)) {
@@ -534,6 +534,89 @@ height_in_inches <- 8.24
 # Save the plot with high quality
 ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/mapa_zonas.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
+
+##3.9 Mapa sin puntitos----
+## 3.7 Hacer el mapa----
+ggplot() +
+  # Superposición de la primera shapefile con la etiqueta "AMPs"
+  geom_sf(data = shapefile_data1, aes(fill = "AMPs"), color = NA, alpha = 0.3) +
+  
+  # Superposición de la segunda shapefile con la etiqueta "Cabrera Archipelago National Park"
+  geom_sf(data = shapefile_data2, aes(fill = "Cabrera National Park"), color = NA, alpha = 0.3) +
+  
+  # Tierra (land) de color gris
+  geom_sf(data = land, fill = "lightgrey", color = NA) +
+  
+  # Línea de costa (osm_data_coastline) de color negro
+  geom_sf(data = osm_data_coastline$osm_lines, color = 'black') +
+  
+  # Añadir etiquetas y títulos
+  labs(
+    title = "SSF Fishers Areas",
+    subtitle = "",
+    x = "Longitude",
+    y = "Latitude",
+    fill = "" # Título de la leyenda
+  ) +
+  
+  # Ajustar la leyenda y las capas
+  scale_fill_manual(
+    values = c("AMPs" = "red", 
+               "Cabrera National Park" = "blue")
+  ) +
+  
+  # Personalizar retocos estéticos de las leyendas
+  guides(
+    fill = guide_legend(
+      override.aes = list(alpha = 0.3),
+      title.position = "top",
+      title.hjust = 0.3
+    )
+  ) +
+  
+  # Aplicar "theme minimal" con personalizaciones
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12, face = "italic"),
+    axis.title = element_text(size = 15),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 12),
+    legend.position = c(0.8, 0.05), # Usar coordenadas relativas para la posición
+    legend.justification = c(0, 0), # Anclar la esquina inferior izquierda
+    legend.background = element_rect(fill = "white", color = NA, linewidth = 0.2), # Fondo blanco con borde
+    panel.grid.major = element_line(color = "#F5F5F5"),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white")
+  ) +
+  
+  # Añadir flecha del norte
+  annotation_north_arrow(
+    location = "tl", 
+    which_north = "true", 
+    style = north_arrow_fancy_orienteering,
+    height = unit(1.5, "cm"),
+    width = unit(1.5, "cm") 
+  ) +
+  
+  # Añadir barra de escala
+  annotation_scale(
+    location = "br", 
+    width_hint = 0.17, 
+    bar_cols = c("black", "white"),
+    text_col = "black",
+    line_width = 0.5,
+    height = unit(0.3, "cm"),
+    unit_category = "metric"
+  )
+
+# Adjust the width and height to inches
+width_in_inches <- 12
+height_in_inches <- 8.24
+
+# Save the plot with high quality
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/mapa_graficos.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
 #4.Conflictos por zonas ---Gráfico likert actividades####
 ##4.1. cargar datos y organizarlos----
@@ -2060,7 +2143,7 @@ ggplot(data_long, aes(y = sp_cien, x = count, fill = abundancia)) +
 ###Guardar el gráfico con calidad específica
 width_in_inches <- 10
 height_in_inches <- 25
-ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_mswest.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_msest.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
 
 #Revisar especies con contradicciones
@@ -2072,12 +2155,12 @@ meast_data_palinurus <- meast_data_ab %>% filter(sp_cien == "Palinurus elephas")
 #Repesentar solo sp_interes
 
 # Filtrar el dataframe
-data_long_filtro_mswest <- data_long %>%
+data_long_filtro_msest <- data_long %>%
   filter(sp_cien %in% sp_filtrar)
 
 
 
-ggplot(data_long_filtro_mswest, aes(y = sp_cien, x = count, fill = abundancia)) +
+ggplot(data_long_filtro_msest, aes(y = sp_cien, x = count, fill = abundancia)) +
   geom_bar(stat = "identity", color = "white", linewidth = 0.3) +
   labs(
     title = "Cambios en las especies - Mallorca South-West",
@@ -2110,7 +2193,7 @@ ggplot(data_long_filtro_mswest, aes(y = sp_cien, x = count, fill = abundancia)) 
 ###Guardar el gráfico con calidad específica
 width_in_inches <- 10
 height_in_inches <- 8
-ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_mswest_pesca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_msest_pesca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
 
 
 ####6.2.2.4.Mallorca South-East----
@@ -2232,4 +2315,385 @@ ggplot(data_long_filtro_meast, aes(y = sp_cien, x = count, fill = abundancia)) +
 width_in_inches <- 10
 height_in_inches <- 8
 ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/sp_meast_pesca.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#7. Grafico rotación####
+#elige las hojas
+head(all_sheets[["B_rotacion"]])
+head(all_sheets[["A_perfil"]])
+
+
+# Leer las hojas en data_frame
+b_rotacion <- read_excel(file_path, sheet = "B_rotacion")
+a_perfil <- read_excel(file_path, sheet = "A_perfil")
+
+b_rotacion <- b_rotacion[,-21]
+b_rotacion <- dplyr::rename(b_rotacion, "linea_mano" = linea_mano...11)
+
+# Seleccionar las columnas de A_perfil
+a_perfil_selected <- a_perfil %>% select(ID, cofradia)
+
+# Merge the dataframes on the ID column
+merged_data_rotacion <- b_rotacion %>%
+  left_join(a_perfil_selected, by = "ID")
+
+# Crear una nueva columna "zona" basada en los valores de 'cofradia'
+merged_data_rotacion <- merged_data_rotacion %>%
+  mutate(zona = case_when(
+    cofradia %in% c("Andratx","Soller", "Pollença") ~ "Mallorca North",
+    cofradia %in% c("Palma", "Colonia de Sant Jordi", "Santanyi", "Portocolom" ) ~ "Mallorca South-West",
+    cofradia %in% c("Alcudia","Cala Ratjada", "Porto Cristo") ~ "Mallorca South-East",
+    cofradia %in% c("San Antoni de Portmany", "Eivissa", "Formentera") ~ "Pitiusas",
+    cofradia %in% c("Ciutadella", "Fornells", "Mao") ~ "Menorca",
+    TRUE ~ "otro" # Para valores que no están en los rangos especificados
+  ))
+
+# Select columns for fish methods
+fish_methods <- merged_data_rotacion %>% 
+  select(-nom_embarcacion, -cofradia)
+
+# Define the chronological order of months in Spanish
+month_levels <- c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
+
+# Convert 'mes' column to a factor with specified levels in English
+fish_methods$mes <- factor(fish_methods$mes, 
+                           levels = c("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"), 
+                           labels = month_levels)
+
+# Create a data frame of all fishers and months
+all_fishers <- expand.grid(ID = unique(fish_methods$ID), mes = levels(fish_methods$mes))
+
+# Merge with fish methods data to include fishers who are not fishing
+all_fishers_methods <- all_fishers %>%
+  left_join(fish_methods, by = c("ID", "mes")) %>%
+  left_join(a_perfil_selected, by = "ID")
+
+# Identificar individuos en el que algún mes no pescan
+all_fishers_methods <- all_fishers_methods %>%
+  mutate(across(3:25, ~ replace_na(., 0))) %>% #Selecciona los métodos de pesca y asigna 0 a los NA
+  mutate(no_fishing = if_else(rowSums(across(3:25)) == 0, 1, 0)) #Suma los valores de las columnas y si es 0, les da un 1
+
+#Reordenar las columnas
+all_fishers_methods <- all_fishers_methods %>%
+  relocate (ID, mes, cofradia, zona)
+
+
+# Reshape the data to long format
+fish_methods_long <- all_fishers_methods %>%
+  pivot_longer(
+    cols = 5:28,  # Selección de columnas por posición
+    names_to = "fishing_method",
+    values_to = "value"
+  ) %>%
+  mutate(fishing_method = if_else(fishing_method == "no_fishing", "No Fishing", fishing_method))
+
+# Define the new names for fishing methods and the desired order
+fishing_method_map <- c(
+  "No Fishing" = "No Pesca",
+  "toninaina" = "Tonaira",
+  "moruna" = "Moruna",
+  "solta" = "Solta",
+  "bonitonera" = "Bonitonera",
+  "gerretera" = "Gerretera",
+  "jonquillera" = "Jonquillera",
+  "llampuguera" = "Llampuguera",
+  "nansas" = "Nasas",
+  "tamb_moren" = "Tambor Morenas",
+  "trasm_lang" = "Trasm Langosta",
+  "trasm_lblanca" = "Trasm Langosta B",
+  "trasm_peix" = "Trasm Pescado",
+  "trasm_moll" = "Trasm Salmonete",
+  "trasm_sepia" = "Trasm Sepia",
+  "bolero" = "Bolero",
+  "beta" = "Beta",
+  "bolitx" = "Bolitx",
+  "currican" = "Currican",
+  "linea_mano" = "Linea Mano",
+  "potera" = "Potera",
+  "palangre" = "Palangre Fondo",
+  "rao" = "Rao", 
+  "sard_agull" = "Sardinal Agullas"
+)
+
+
+fish_methods_long <- fish_methods_long %>%
+  mutate(fishing_method = case_when(
+    fishing_method == "No Fishing" ~ "No Pesca",
+    fishing_method == "toninaina" ~ "Tonaira",
+    fishing_method == "moruna" ~ "Moruna",
+    fishing_method == "solta" ~ "Solta",
+    fishing_method == "bonitonera" ~ "Bonitonera",
+    fishing_method == "gerretera" ~ "Gerretera",
+    fishing_method == "jonquillera" ~ "Jonquillera",
+    fishing_method == "llampuguera" ~ "Llampuguera",
+    fishing_method == "nansas" ~ "Nasas",
+    fishing_method == "tamb_moren" ~ "Tambor Morenas",
+    fishing_method == "trasm_lang" ~ "Trasm Langosta",
+    fishing_method == "trasm_lblanca" ~ "Trasm Langosta B",
+    fishing_method == "trasm_peix" ~ "Trasm Pescado",
+    fishing_method == "trasm_moll" ~ "Trasm Salmonete",
+    fishing_method == "trasm_sepia" ~ "Trasm Sepia",
+    fishing_method == "bolero" ~ "Bolero",
+    fishing_method == "beta" ~ "Beta",
+    fishing_method == "bolitx" ~ "Bolitx",
+    fishing_method == "currican" ~ "Currican",
+    fishing_method == "linea_mano" ~ "Linea Mano",
+    fishing_method == "potera" ~ "Potera",
+    fishing_method == "palangre" ~ "Palangre Fondo",
+    fishing_method == "rao" ~ "Rao",
+    fishing_method == "sard_agull" ~ "Sardinal Agullas",
+    TRUE ~ fishing_method  # Deja cualquier valor que no esté en el mapeo
+  ))
+
+# Summarize and calculate percentages
+fish_methods_summary <- fish_methods_long %>%
+  group_by(zona, mes, fishing_method) %>%
+  summarize(total_value = sum(value, na.rm = TRUE)) %>%
+  group_by(zona, mes) %>%
+  mutate(total = sum(total_value), percent = total_value / total * 100) %>%
+  ungroup()
+
+# Convert 'fishing_method' column to a factor with specified levels in English
+
+fish_methods_summary$fishing_method <- factor(fish_methods_summary$fishing_method, 
+                                              levels = c("No Pesca", "Tonaira","Moruna","Solta","Bonitonera", "Gerretera","Jonquillera", "Llampuguera", "Sardinal Agullas", "Nasas", "Tambor Morenas", "Trasm Langosta",
+                                                         "Trasm Langosta B", "Trasm Pescado", "Trasm Salmonete", "Trasm Sepia", "Bolero", "Beta", "Bolitx", "Currican",
+                                                         "Linea Mano","Caña",  "Potera", "Palangre Fondo", "Rao"))
+
+unique(fish_methods_long$fishing_method)
+
+pal <- c("grey", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", 
+         "#800000", "#808000", "#008000", "#800080", "#008080", "#000080", 
+         "#FFA500", "#A52A2A", "#7FFF00", "#FF1493", "#00BFFF", "#FF4500", 
+         "#2E8B57", "#6A5ACD", "#FFD700", "#DC143C", "#8A2BE2", "#00CED1") # Añadidos: BlueViolet y DarkTurquoise
+
+
+pal <- c("No Pesca" = "black", "Tonaira" = "deepskyblue3",  "Moruna" = "deepskyblue2", "Solta" = "lightskyblue1", "Bonitonera" = "#00FFFF",
+         "Gerretera" = "#1a9850", "Jonquillera" = "#66bd63", "Llampuguera" = "#a6d96a", "Sardinal Agullas" = "#d9ef8b",
+         "Nasas" = "#800000", "Tambor Morenas" = "brown1", "Trasm Langosta" = "#8c510a",
+         "Trasm Langosta B" = "#808000", "Trasm Pescado" ="#FFFF00", "Trasm Salmonete" = "#bf812d", "Trasm Sepia" = "#dfc27d", 
+         "Bolero" = "#f6e8c3", "Beta" = "#FFA500", "Bolitx" = "#CFB28C", "Currican" = "#9970ab",
+         "Linea Mano" = "#762a83","Potera" = "#c2a5cf", "Palangre Fondo" = "ivory4", "Rao" = "ivory3", "Volantin" = "#e7d4e8", "Palangre de superficie" = "ivory2", "Palangró" = "ivory3")
+
+
+
+
+
+
+ggplot(fish_methods_summary, aes(x = mes, y = percent, fill = fishing_method)) +
+  geom_bar(stat = "identity", position = "fill") +
+  facet_wrap(~ zona, scales = "free_x") +
+  labs(title = "Percentage of Different Fishing Methods Used by Month and Island",
+       x = "Mes",
+       y = "Porcentaje",
+       fill = "Artes de pesca") +
+  scale_fill_manual(values = pal) +  # Use the custom color palette
+  theme_classic(base_size = 20) +  # Apply a minimal theme with larger base font size
+  theme(axis.text.x = element_text(angle = 60, hjust = 1),  # Rotate x-axis labels for better readability
+        strip.placement = "outside",
+        strip.background = element_rect(fill = NA, color = NA),
+        strip.text = element_text(face = "bold"),  # Bold facet labels for emphasis
+        panel.spacing = unit(0.5, "cm"),  # Increase space between panels
+        legend.title = element_text(face = "bold"),  # Bold legend title
+        legend.text = element_text(size = 14),  # Adjust legend text size
+        plot.title = element_text(face = "bold", hjust = 0.5),  # Center and bold the title
+        axis.title = element_text(face = "bold")) +  # Bold axis titles
+  scale_y_continuous(expand = c(0, 0), labels = percent_format())  # Eliminate space under 0 from the y-axis and format as percent
+
+
+# Adjust the width and height to inches
+width_in_inches <- 14
+height_in_inches <- 8
+
+# Save the plot with high quality
+ggsave("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/rotacion2.png", dpi = 310, width = width_in_inches, height = height_in_inches, units = "in", limitsize = FALSE)
+
+
+#graficos separados
+
+# Generate and save plots for each island
+islands <- unique(fish_methods_summary$zona)
+for (island in islands) {
+  island_data <- fish_methods_summary %>% filter(zona == island)
+  
+  p <- ggplot(island_data, aes(x = mes, y = percent, fill = fishing_method)) +
+    geom_bar(stat = "identity", position = "fill") +
+    labs(title = paste("Percentage of Different Fishing Methods Used by Month -", island),
+         x = "Mes",
+         y = "Porcentaje",
+         fill = "Arte de pesca") +
+    scale_fill_manual(values = pal) +  # Use the custom color palette
+    theme_classic(base_size = 24) +  # Apply a minimal theme with larger base font size
+    theme(axis.text.x = element_text(angle = 60, hjust = 1),  # Rotate x-axis labels for better readability
+          strip.placement = "outside",
+          strip.background = element_rect(fill = NA, color = NA),
+          strip.text = element_text(face = "bold"),  # Bold facet labels for emphasis
+          panel.spacing = unit(0.5, "cm"),  # Increase space between panels
+          legend.title = element_text(face = "bold"),  # Bold legend title
+          legend.text = element_text(size = 16),  # Adjust legend text size
+          plot.title = element_text(face = "bold", hjust = 0.5),  # Center and bold the title
+          axis.title = element_text(face = "bold")) +  # Bold axis titles
+    scale_y_continuous(expand = c(0, 0), labels = percent_format())  # Eliminate space under 0 from the y-axis and format as percent
+  
+  # Save the plot with high quality
+  ggsave(paste0("D:/BASES DE DATOS/CAPITULO_01/graficos_cap01/rotacion_", island, ".png"), plot = p, dpi = 310, width = 14, height = 8, units = "in", limitsize = FALSE)
+}
+
+
+#8.Gráficos quesitos efecto CC####
+##8.1. cargar datos y organizarlos----
+head(all_sheets[["E_ambiental"]])
+head(all_sheets[["A_perfil"]])
+
+# Read the specific sheets into dataframes
+e_ambiental <- read_excel(file_path, sheet = "E_ambiental")
+a_perfil <- read_excel(file_path, sheet = "A_perfil")
+
+# Select the relevant columns from A_perfil
+a_perfil_selected <- a_perfil %>% select(ID, cofradia)
+# Select the relevant columns from E_ambiental
+e_ambiental_selected <- e_ambiental %>% select(ID,Q19_efecto_now,Q19_efecto_now_tipo, Q19_efecto_now_exp, Q20_efecto_fut,Q20_efecto_fut_tipo, Q20_efecto_fut_exp, Q22_cc_sp,Q22_cc_sp_exp,Q23_cc_now, Q23_cc_now_exp, Q24_cc_fut,Q24_cc_fut_exp)
+
+# Merge the dataframes on the ID column
+merged_data_ambiental <- e_ambiental_selected %>%
+  left_join(a_perfil_selected, by = "ID")
+
+
+# Crear una nueva columna "zona" basada en los valores de 'cofradia'
+merged_data_ambiental <- merged_data_ambiental %>%
+  mutate(zona = case_when(
+    cofradia %in% c("Andratx","Soller", "Pollença") ~ "Mallorca North",
+    cofradia %in% c("Palma", "Colonia de Sant Jordi", "Santanyi", "Portocolom" ) ~ "Mallorca South-West",
+    cofradia %in% c("Alcudia","Cala Ratjada", "Porto Cristo") ~ "Mallorca South-East",
+    cofradia %in% c("San Antoni de Portmany", "Eivissa", "Formentera") ~ "Pitiusas",
+    cofradia %in% c("Ciutadella", "Fornells", "Mao") ~ "Menorca",
+    TRUE ~ "otro" # Para valores que no están en los rangos especificados
+  ))
+
+write.csv(merged_data_ambiental, "D:/BASES DE DATOS/CAPITULO_01/datos_cap01/datos_limpios_cap01/datos_quesitos.csv")
+
+##8.2.Quesito efecto_now----
+
+
+# Eliminar NAs en Q19_efecto_now
+filtered_ambiental <- merged_data_ambiental %>%
+  filter(Q19_efecto_now != "NA")
+
+# ZONA m north
+filtered_ambiental_mnorth <- filtered_ambiental %>%
+  filter(zona == "Mallorca North")
+# Calcular frecuencias
+frecuencias_mnorthdf <- filtered_ambiental_mnorth %>%
+  count(Q19_efecto_now, Q19_efecto_now_tipo, name = "Freq")
+print(frecuencias_mnorthdf)
+PD = frecuencias_mnorthdf %>% group_by(Q19_efecto_now, Q19_efecto_now_tipo) %>% summarise(n = sum(Freq))
+print(PD)
+
+# Aplicar los colores al gráfico PieDonut
+PieDonut(
+  PD,
+  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  r0 = 0,
+  title = "Mallorca North",
+  ratioByGroup = FALSE,
+  showPieName = FALSE,
+  r1 = 0.9,
+)
+
+# ZONA Mallorca South-East
+filtered_ambiental_msest <- filtered_ambiental %>%
+  filter(zona == "Mallorca South-East")
+# Calcular frecuencias
+frecuencias_msestdf <- filtered_ambiental_msest %>%
+  count(Q19_efecto_now, Q19_efecto_now_tipo, name = "Freq")
+print(frecuencias_msestdf)
+PD = frecuencias_msestdf %>% group_by(Q19_efecto_now, Q19_efecto_now_tipo) %>% summarise(n = sum(Freq))
+print(PD)
+
+PD
+
+# Aplicar los colores al gráfico PieDonut
+# Aplicar los colores al gráfico PieDonut
+PieDonut(
+  PD,
+  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  r0 = 0,
+  title = "Mallorca seast",
+  ratioByGroup = FALSE,
+  showPieName = FALSE,
+  r1 = 0.9,
+)
+
+# ZONA Mallorca South-West
+filtered_ambiental_msest <- filtered_ambiental %>%
+  filter(zona == "Mallorca South-West")
+# Calcular frecuencias
+frecuencias_msestdf <- filtered_ambiental_msest %>%
+  count(Q19_efecto_now, Q19_efecto_now_tipo, name = "Freq")
+print(frecuencias_msestdf)
+PD = frecuencias_msestdf %>% group_by(Q19_efecto_now, Q19_efecto_now_tipo) %>% summarise(n = sum(Freq))
+print(PD)
+
+PD
+
+# Aplicar los colores al gráfico PieDonut
+# Aplicar los colores al gráfico PieDonut
+PieDonut(
+  PD,
+  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  r0 = 0,
+  title = "Mallorca North",
+  ratioByGroup = FALSE,
+  showPieName = FALSE,
+  r1 = 0.9,
+)
+
+# ZONA Menorca
+filtered_ambiental_men <- filtered_ambiental %>%
+  filter(zona == "Menorca")
+# Calcular frecuencias
+frecuencias_mendf <- filtered_ambiental_men %>%
+  count(Q19_efecto_now, Q19_efecto_now_tipo, name = "Freq")
+print(frecuencias_mendf)
+PD = frecuencias_mendf %>% group_by(Q19_efecto_now, Q19_efecto_now_tipo) %>% summarise(n = sum(Freq))
+print(PD)
+
+PD
+
+# Aplicar los colores al gráfico PieDonut
+# Aplicar los colores al gráfico PieDonut
+PieDonut(
+  PD,
+  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  r0 = 0,
+  title = "Menorca",
+  ratioByGroup = FALSE,
+  showPieName = FALSE,
+  r1 = 0.9,
+)
+
+
+# ZONA Menorca
+filtered_ambiental_pit <- filtered_ambiental %>%
+  filter(zona == "Pitiusas")
+# Calcular frecuencias
+frecuencias_pitdf <- filtered_ambiental_pit %>%
+  count(Q19_efecto_now, Q19_efecto_now_tipo, name = "Freq")
+print(frecuencias_pitdf)
+PD = frecuencias_pitdf %>% group_by(Q19_efecto_now, Q19_efecto_now_tipo) %>% summarise(n = sum(Freq))
+print(PD)
+
+PD
+
+# Aplicar los colores al gráfico PieDonut
+# Aplicar los colores al gráfico PieDonut
+PieDonut(
+  PD,
+  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  r0 = 0,
+  title = "Pitiusas",
+  ratioByGroup = FALSE,
+  showPieName = FALSE,
+  r1 = 0.9,
+)
 
