@@ -2590,14 +2590,15 @@ PD = frecuencias_mnorthdf %>% group_by(Q19_efecto_now, Q19_efecto_now_tipo) %>% 
 print(PD)
 
 # Aplicar los colores al gráfico PieDonut
+# Aplicar los colores al gráfico PieDonut
 PieDonut(
   PD,
-  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  aes(Q19_efecto_now, Q19_efecto_now_tipo, count=n),
   r0 = 0,
   title = "Mallorca North",
-  ratioByGroup = FALSE,
+  ratioByGroup = TRUE,
   showPieName = FALSE,
-  r1 = 0.9,
+  r1 = 0.9
 )
 
 # ZONA Mallorca South-East
@@ -2616,12 +2617,12 @@ PD
 # Aplicar los colores al gráfico PieDonut
 PieDonut(
   PD,
-  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  aes(Q19_efecto_now, Q19_efecto_now_tipo, count=n),
   r0 = 0,
-  title = "Mallorca seast",
-  ratioByGroup = FALSE,
+  title = "s-east",
+  ratioByGroup = TRUE,
   showPieName = FALSE,
-  r1 = 0.9,
+  r1 = 0.9
 )
 
 # ZONA Mallorca South-West
@@ -2640,9 +2641,9 @@ PD
 # Aplicar los colores al gráfico PieDonut
 PieDonut(
   PD,
-  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  aes(Q19_efecto_now, Q19_efecto_now_tipo, count=n),
   r0 = 0,
-  title = "Mallorca North",
+  title = "Mallorca SWEST",
   ratioByGroup = FALSE,
   showPieName = FALSE,
   r1 = 0.9,
@@ -2664,16 +2665,16 @@ PD
 # Aplicar los colores al gráfico PieDonut
 PieDonut(
   PD,
-  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  aes(Q19_efecto_now, Q19_efecto_now_tipo, count=n),
   r0 = 0,
   title = "Menorca",
-  ratioByGroup = FALSE,
+  ratioByGroup = TRUE,
   showPieName = FALSE,
   r1 = 0.9,
 )
 
 
-# ZONA Menorca
+# ZONA Pitiusas
 filtered_ambiental_pit <- filtered_ambiental %>%
   filter(zona == "Pitiusas")
 # Calcular frecuencias
@@ -2689,7 +2690,7 @@ PD
 # Aplicar los colores al gráfico PieDonut
 PieDonut(
   PD,
-  aes(Q19_efecto_now, Q19_efecto_now_tipo),
+  aes(Q19_efecto_now, Q19_efecto_now_tipo, count=n),
   r0 = 0,
   title = "Pitiusas",
   ratioByGroup = FALSE,
